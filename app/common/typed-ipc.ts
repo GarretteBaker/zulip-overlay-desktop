@@ -28,6 +28,12 @@ export type MainMessage = {
 export type MainCall = {
   "get-server-settings": (domain: string) => ServerConfig;
   "is-online": (url: string) => boolean;
+  "overlay-request": (
+    method: string,
+    path: string,
+    body: unknown,
+    token: string | undefined,
+  ) => {status: number; body: unknown};
   "poll-clipboard": (key: Uint8Array, sig: Uint8Array) => string | undefined;
   "save-server-icon": (iconURL: string) => string | null;
 };

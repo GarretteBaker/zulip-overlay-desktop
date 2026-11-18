@@ -18,6 +18,7 @@ import * as remoteMain from "@electron/remote/main";
 import windowStateKeeper from "electron-window-state";
 
 import * as ConfigUtil from "../common/config-util.ts";
+import {isOverlayUrl, overlayServiceUrl} from "../common/overlay-config.ts";
 import {bundlePath, bundleUrl, publicPath} from "../common/paths.ts";
 import {t} from "../common/translation-util.ts";
 import type {RendererMessage} from "../common/typed-ipc.ts";
@@ -289,6 +290,53 @@ function createMainWindow(): BrowserWindow {
     _isOnline(url, ses),
   );
 
+  // Zulip overlay: relay a request from the overlay script to the overlay
+  // service. Only pages of an overlay organization may call it.
+  ipcMain.handle(
+    "overlay-request",
+    async (
+      event,
+      method: string,
+      path: string,
+      body: unknown,
+      token: string | undefined,
+    ) => {
+      if (!isOverlayUrl(event.senderFrame?.url ?? "")) {
+        throw new Error("overlay-request from a page outside the overlay");
+      }
+
+      if (!path.startsWith("/")) {
+        throw new Error(`overlay-request path must start with /: ${path}`);
+      }
+
+      // A status of 0 tells the overlay script the service is unreachable;
+      // it then hides its vote controls and tells the user.
+      const response = await fetch(overlayServiceUrl + path, {
+        method,
+        headers: {
+          "Content-Type": "application/json",
+          ...(token === undefined ? {} : {Authorization: `Bearer ${token}`}),
+        },
+        body: body === undefined ? null : JSON.stringify(body),
+      }).catch((error: unknown) => {
+        console.error("overlay service unreachable", error);
+        return undefined;
+      });
+      if (response === undefined) {
+        return {status: 0, body: undefined};
+      }
+
+      const text = await response.text();
+      const isJson = response.headers
+        .get("content-type")
+        ?.startsWith("application/json");
+      const responseBody: unknown = isJson
+        ? JSON.parse(text)
+        : {detail: `the overlay service failed (${response.status})`};
+      return {status: response.status, body: responseBody};
+    },
+  );
+
   page.once("did-frame-finish-load", () => {
     // Initiate auto-updates on MacOS and Windows
     if (ConfigUtil.getConfigItem("autoUpdate", true)) {
@@ -423,7 +471,7 @@ function createMainWindow(): BrowserWindow {
       properties.activeTabIndex !== undefined &&
       (activeTab = properties.tabs[properties.activeTabIndex]) !== undefined
     ) {
-      mainWindow.setTitle(`Zulip - ${activeTab.label}`);
+      mainWindow.setTitle(`Zulip Overlay (prototype) - ${activeTab.label}`);
     }
   });
 

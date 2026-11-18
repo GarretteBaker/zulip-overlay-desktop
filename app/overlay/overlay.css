@@ -1,0 +1,716 @@
+/* Zulip overlay: styles injected into the stock web app. Every rule is
+   prefixed zo- or scoped under a zo- class, so nothing here restyles a stock
+   Zulip element unless the overlay script has marked it. */
+
+/* ------------------------------------------------------------------ votes */
+
+.zo-votes {
+  display: inline-flex;
+  align-items: center;
+  gap: 1px;
+  line-height: 1;
+  user-select: none;
+}
+
+.zo-votes button,
+.zo-bar button,
+.zo-select-bar button,
+.zo-subtopic-button {
+  all: unset;
+  cursor: pointer;
+  padding: 3px 5px;
+  border-radius: 4px;
+  color: inherit;
+  opacity: 0.65;
+}
+
+.zo-votes button:hover,
+.zo-bar button:hover,
+.zo-select-bar button:hover,
+.zo-subtopic-button:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+.zo-votes button.zo-mine {
+  opacity: 1;
+  color: hsl(217deg 85% 60%);
+}
+
+.zo-votes button.zo-down.zo-mine {
+  color: hsl(0deg 75% 60%);
+}
+
+.zo-score {
+  min-width: 1.4em;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+/* Topic votes: always visible, right after the topic name in the header
+   bar, and deliberately the most prominent thing the overlay draws. */
+.zo-header-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 10px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.zo-votes-topic {
+  gap: 2px;
+  padding: 1px 4px 1px 8px;
+  border: 1px solid hsl(217deg 85% 62%);
+  border-radius: 999px;
+  background: color-mix(in srgb, hsl(217deg 85% 62%) 16%, transparent);
+  font-size: 13px;
+}
+
+.zo-votes-label {
+  margin-right: 4px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+.zo-votes-topic button {
+  padding: 3px 7px;
+  font-size: 14px;
+  opacity: 0.9;
+}
+
+.zo-votes-topic .zo-score {
+  font-size: 14px;
+}
+
+.zo-subtopic-button {
+  font-size: 12px;
+  visibility: hidden;
+}
+
+.message_header:hover .zo-subtopic-button {
+  visibility: visible;
+}
+
+.zo-ask input {
+  width: 190px;
+  padding: 2px 6px;
+  border: 1px solid color-mix(in srgb, currentcolor 35%, transparent);
+  border-radius: 4px;
+  background: var(--color-background, Canvas);
+  color: var(--color-text-default, CanvasText);
+  font-size: 12px;
+}
+
+/* ------------------------------------------- per-message meta and toolbar */
+
+/* Always shown, in the message's own flow below its text. Takes no space
+   when it has nothing to show. */
+.zo-meta {
+  /* Starts where the message text starts, in Zulip's own grid. */
+  grid-column: message-start / -1;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+  font-size: 12px;
+  line-height: 1.3;
+}
+
+.zo-meta:not(:has(> :not(:empty))) {
+  display: none;
+}
+
+.zo-meta > :empty {
+  display: none;
+}
+
+.zo-meta:has(> :not(:empty)) {
+  margin-top: 3px;
+  margin-bottom: 3px;
+}
+
+.zo-static-score {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+/* Shown only on hover, floating over the message's top edge, so it never
+   covers the message text or pushes anything. */
+.messagebox-content:has(> .zo-bar) {
+  position: relative;
+}
+
+.zo-bar {
+  position: absolute;
+  right: 110px;
+  top: -16px;
+  z-index: 5;
+  display: none;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 5px;
+  border: 1px solid color-mix(in srgb, currentcolor 20%, transparent);
+  border-radius: 6px;
+  background: var(--color-background, Canvas);
+  box-shadow: 0 2px 6px hsl(0deg 0% 0% / 25%);
+  font-size: 12px;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.message_row:hover .zo-bar,
+.zo-bar:has(.zo-ask) {
+  display: flex;
+}
+
+/* A message that shows its sender sits right under a topic header or a date
+   line. There the toolbar goes on the sender's line, left of Zulip's own
+   message buttons, so it never covers the header's vote control. */
+.message_row.messagebox-includes-sender .zo-bar {
+  top: 1px;
+  right: 190px;
+}
+
+.zo-bar .zo-emoji.zo-mine {
+  opacity: 1;
+  background: color-mix(in srgb, hsl(217deg 85% 60%) 30%, transparent);
+  box-shadow: inset 0 0 0 1px hsl(217deg 85% 60%);
+}
+
+/* While the passage bar is up, it is the only toolbar. */
+body:has(.zo-select-bar) .zo-bar {
+  display: none;
+}
+
+.zo-bar .zo-votes-message button {
+  font-size: 10px;
+}
+
+.zo-quick {
+  gap: 0;
+}
+
+.zo-emoji {
+  font-size: 14px;
+}
+
+.zo-threads {
+  flex: 0 0 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.zo-threads:empty {
+  display: none;
+}
+
+.zo-thread-card {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 6px 10px;
+  border-left: 3px solid hsl(217deg 85% 62%);
+  border-radius: 0 6px 6px 0;
+  background: color-mix(in srgb, hsl(217deg 85% 62%) 9%, transparent);
+  color: inherit;
+  font-size: 14px;
+  line-height: 1.35;
+  text-decoration: none;
+}
+
+.zo-thread-card:hover {
+  background: color-mix(in srgb, hsl(217deg 85% 62%) 18%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.zo-thread-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.zo-thread-kicker {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  color: hsl(217deg 85% 68%);
+}
+
+.zo-thread-name {
+  font-weight: 600;
+}
+
+.zo-thread-open {
+  margin-left: auto;
+  font-size: 12px;
+  opacity: 0.6;
+  white-space: nowrap;
+}
+
+.zo-thread-preview {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  opacity: 0.75;
+}
+
+.zo-bar .zo-ask {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.zo-ask-room {
+  min-width: 1.6em;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.6;
+}
+
+.zo-reply-count:empty {
+  display: none;
+}
+
+.zo-reply-count {
+  opacity: 0.6;
+}
+
+/* ---------------------------------------------------------------- replies */
+
+.zo-reply-header,
+.zo-thread-header {
+  display: none;
+}
+
+/* A quiet reference line, not a link in the message's text. */
+.message_content a.zo-reply-chip,
+.message_content a.zo-reply-chip:hover {
+  color: inherit !important; /* stylelint-disable-line declaration-no-important */
+  text-decoration: none !important; /* stylelint-disable-line declaration-no-important */
+}
+
+.zo-reply-chip {
+  display: block;
+  width: fit-content;
+  max-width: 100%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  margin-bottom: 2px;
+  font-size: 12px;
+  opacity: 0.65;
+  text-decoration: none;
+}
+
+.zo-reply-chip:hover {
+  opacity: 1;
+}
+
+.zo-quote {
+  cursor: pointer;
+}
+
+.zo-quote-collapsed {
+  max-height: 1.5em;
+  overflow: hidden;
+  opacity: 0.6;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* One line of the quote, ending in an ellipsis. */
+.zo-quote-collapsed > * {
+  margin: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.zo-quote-collapsed > :not(:first-child) {
+  display: none;
+}
+
+/* The message a reply line points at, lit for a moment after the jump. */
+.message_row.zo-flash .messagebox-content {
+  /* stylelint-disable declaration-no-important */
+  background: color-mix(
+    in srgb,
+    hsl(217deg 85% 60%) 26%,
+    transparent
+  ) !important;
+  box-shadow: inset 3px 0 0 hsl(217deg 85% 60%) !important;
+  /* stylelint-enable declaration-no-important */
+  transition: background 0.3s;
+}
+
+.zo-reply-chip:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---------------------------------------------------------- nested topics */
+
+ul.topic-list.zo-nested {
+  display: flex;
+  flex-direction: column;
+}
+
+li.topic-list-item.zo-subtopic .topic-box {
+  padding-left: calc(var(--zo-depth) * 16px);
+}
+
+li.topic-list-item.zo-folded-child {
+  display: none !important; /* stylelint-disable-line declaration-no-important */
+}
+
+li.topic-list-item:has(> .zo-fold) {
+  position: relative;
+}
+
+.zo-fold {
+  position: absolute;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 15px;
+  border-radius: 3px;
+  font-size: 8px;
+  line-height: 1;
+  cursor: pointer;
+  opacity: 0.7;
+}
+
+.zo-fold:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+/* Unread messages hidden inside a folded topic. */
+.zo-fold-unread {
+  margin-right: 4px;
+  padding: 0 4px;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentcolor 16%, transparent);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 16px;
+}
+
+/* -------------------------------------------------------- inline reactions */
+
+.katex.zo-inline {
+  background: color-mix(in srgb, hsl(48deg 95% 55%) 28%, transparent);
+  border-bottom: 1px solid hsl(48deg 95% 45%);
+}
+
+mark.zo-inline {
+  padding: 0;
+  color: inherit;
+  background: color-mix(in srgb, hsl(48deg 95% 55%) 28%, transparent);
+  border-bottom: 1px solid hsl(48deg 95% 45%);
+}
+
+.zo-inline-badges {
+  margin-left: 2px;
+  white-space: nowrap;
+  user-select: none;
+}
+
+.zo-inline-badge {
+  all: unset;
+  cursor: pointer;
+  margin-right: 2px;
+  padding: 0 5px;
+  border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+  border-radius: 9px;
+  font-size: 11px;
+  vertical-align: 1px;
+}
+
+.zo-inline-badge.zo-mine {
+  border-color: hsl(217deg 85% 60%);
+  background: color-mix(in srgb, hsl(217deg 85% 60%) 16%, transparent);
+}
+
+.zo-select-bar {
+  position: fixed;
+  z-index: 250;
+  display: flex;
+  padding: 2px 4px;
+  border: 1px solid color-mix(in srgb, currentcolor 25%, transparent);
+  border-radius: 8px;
+  background: var(--color-background, Canvas);
+  color: var(--color-text-default, CanvasText);
+  box-shadow: 0 3px 12px hsl(0deg 0% 0% / 30%);
+}
+
+/* ------------------------------------------------------ time-gap dividers */
+
+.zo-gap::before {
+  content: attr(data-zo-gap);
+  display: block;
+  grid-column: 1 / -1;
+  white-space: nowrap;
+  margin: 6px 12px 2px var(--zo-indent, 68px);
+  padding-top: 6px;
+  border-top: 1px dashed color-mix(in srgb, currentcolor 25%, transparent);
+  font-size: 11px;
+  opacity: 0.55;
+}
+
+/* -------------------------------------------------- topic list sort control */
+
+.zo-sort {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding: 1px 6px 3px 0;
+  list-style: none;
+  font-size: 12px;
+  color: inherit;
+  opacity: 0.6;
+}
+
+.zo-sort:hover,
+.zo-sort:focus-within {
+  opacity: 1;
+}
+
+.zo-sort-label {
+  white-space: nowrap;
+}
+
+/* Reads as plain text with a small caret, not a form field. */
+.zo-sort select {
+  appearance: none;
+  /* As wide as the chosen option, so the caret sits next to the word. */
+  field-sizing: content;
+  min-width: 0;
+  outline: none;
+  padding: 0 14px 0 2px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent
+    linear-gradient(45deg, transparent 50%, currentcolor 50%) no-repeat right
+    4px center / 5px 5px;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.zo-sort select:focus-visible {
+  box-shadow: 0 0 0 1px color-mix(in srgb, currentcolor 45%, transparent);
+}
+
+.zo-sort select:hover {
+  background-color: color-mix(in srgb, currentcolor 12%, transparent);
+}
+
+.zo-sort option {
+  background: var(--color-background, Canvas);
+  color: var(--color-text-default, CanvasText);
+  font-weight: 400;
+}
+
+/* ----------------------------------------------------------------- notices */
+
+/* Bottom left, no wider than the left sidebar, so it never covers the
+   compose box. */
+.zo-notice {
+  position: fixed;
+  left: 10px;
+  bottom: 12px;
+  z-index: 300;
+  max-width: 270px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: hsl(40deg 90% 88%);
+  color: hsl(30deg 60% 20%);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+/* When the overlay service cannot be reached, hide what depends on it.
+   Replies, nested topics and one-click reactions need only Zulip. */
+.zo-service-down .zo-votes,
+.zo-service-down .zo-header-slot,
+.zo-service-down .zo-static-score,
+.zo-service-down .zo-sort,
+.zo-service-down .zo-select-bar,
+.zo-service-down .zo-inline-badges {
+  display: none !important; /* stylelint-disable-line declaration-no-important */
+}
+
+/* --------------------------------------------------------- AI spoiler tint */
+
+/* A stripe in the block's provenance colour down its left edge, drawn
+   inside Zulip's own rounded border, and a faint tint of the same colour. */
+.rendered_markdown .spoiler-block.zo-ai {
+  border-color: color-mix(in srgb, var(--zo-ai-color) 55%, transparent);
+  background: color-mix(in srgb, var(--zo-ai-color) 9%, transparent);
+  box-shadow: inset 4px 0 0 var(--zo-ai-color);
+}
+
+.spoiler-block.zo-ai-black {
+  --zo-ai-color: hsl(0deg 0% 55%);
+}
+
+.spoiler-block.zo-ai-red {
+  --zo-ai-color: hsl(0deg 75% 55%);
+}
+
+.spoiler-block.zo-ai-yellow {
+  --zo-ai-color: hsl(45deg 90% 50%);
+}
+
+.spoiler-block.zo-ai-green {
+  --zo-ai-color: hsl(130deg 55% 42%);
+}
+
+/* ---------------------------------------------------------------- settings */
+
+.zo-settings-button .header-button {
+  font-size: 17px;
+  line-height: 1;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.zo-settings {
+  position: fixed;
+  z-index: 310;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 300px;
+  padding: 12px 14px;
+  border: 1px solid color-mix(in srgb, currentcolor 22%, transparent);
+  border-radius: 8px;
+  background: var(--color-background, Canvas);
+  color: var(--color-text-default, CanvasText);
+  box-shadow: 0 6px 24px hsl(0deg 0% 0% / 35%);
+  font-size: 14px;
+  line-height: 1.35;
+}
+
+.zo-settings-title {
+  font-weight: 600;
+}
+
+.zo-settings-heading {
+  margin-top: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.zo-settings-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  font-weight: 400;
+  cursor: pointer;
+}
+
+.zo-settings-row input[type="checkbox"] {
+  margin: 0;
+}
+
+.zo-settings-row input[type="number"] {
+  width: 56px;
+  margin: 0;
+  padding: 1px 4px;
+  border: 1px solid color-mix(in srgb, currentcolor 35%, transparent);
+  border-radius: 4px;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+}
+
+.zo-settings-palette {
+  display: grid;
+  grid-template-columns: repeat(9, 1fr);
+  gap: 2px;
+}
+
+.zo-settings-emoji {
+  all: unset;
+  cursor: pointer;
+  padding: 3px 0;
+  border-radius: 4px;
+  text-align: center;
+  font-size: 16px;
+  opacity: 0.55;
+}
+
+.zo-settings-emoji:hover {
+  opacity: 1;
+  background: color-mix(in srgb, currentcolor 14%, transparent);
+}
+
+.zo-settings-emoji.zo-mine {
+  opacity: 1;
+  background: color-mix(in srgb, hsl(217deg 85% 60%) 30%, transparent);
+  box-shadow: inset 0 0 0 1px hsl(217deg 85% 60%);
+}
+
+.zo-settings-hint {
+  font-size: 12px;
+  opacity: 0.65;
+}
+
+/* --------------------------------------------- features switched off
+   Each feature is switched off by hiding what it draws and showing what it
+   hid, so the page under it is stock Zulip again. */
+
+.zo-off-votes .zo-votes,
+.zo-off-votes .zo-header-slot,
+.zo-off-votes .zo-static-score,
+.zo-off-votes .zo-sort,
+.zo-off-replies .zo-reply-button,
+.zo-off-replies .zo-reply-count,
+.zo-off-replies .zo-reply-chip:not(.zo-thread-origin),
+.zo-off-threads .zo-thread-button,
+.zo-off-threads .zo-threads,
+.zo-off-threads .zo-ask,
+.zo-off-threads .zo-thread-origin,
+.zo-off-reactions .zo-quick,
+.zo-off-inline .zo-inline-badges,
+.zo-off-gaps .zo-gap::before,
+.zo-off-votes.zo-off-replies.zo-off-threads.zo-off-reactions .zo-bar {
+  display: none !important; /* stylelint-disable-line declaration-no-important */
+}
+
+.zo-off-replies .zo-reply-header,
+.zo-off-threads .zo-thread-header {
+  display: block;
+}
+
+.zo-off-replies .zo-quote-collapsed {
+  max-height: none;
+  overflow: visible;
+  opacity: 1;
+  white-space: normal;
+}
+
+.zo-off-inline mark.zo-inline,
+.zo-off-inline .katex.zo-inline {
+  background: none;
+  border-bottom: 0;
+}
+
+.zo-off-ai .rendered_markdown .spoiler-block.zo-ai {
+  border-color: revert-layer;
+  background: revert-layer;
+  box-shadow: none;
+}

@@ -6,6 +6,18 @@ import {ipcRenderer} from "./typed-ipc-renderer.ts";
 
 contextBridge.exposeInMainWorld("electron_bridge", electron_bridge);
 
+// Zulip overlay: the injected overlay script reaches the overlay service
+// through the main process, which checks the calling page and is not
+// subject to the page's content security policy.
+contextBridge.exposeInMainWorld("zulip_overlay", {
+  request: async (
+    method: string,
+    path: string,
+    body: unknown,
+    token: string | undefined,
+  ) => ipcRenderer.invoke("overlay-request", method, path, body, token),
+});
+
 ipcRenderer.on("logout", () => {
   bridgeEvents.dispatchEvent(new BridgeEvent("logout"));
 });
