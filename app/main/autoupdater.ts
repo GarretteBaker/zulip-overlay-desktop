@@ -1,5 +1,5 @@
 import {shell} from "electron/common";
-import {app, dialog, session} from "electron/main";
+import {app, dialog} from "electron/main";
 import process from "node:process";
 
 import log from "electron-log/main";
@@ -10,10 +10,8 @@ import {
 } from "electron-updater";
 
 import * as ConfigUtil from "../common/config-util.ts";
-import {overlayHosts} from "../common/overlay-config.ts";
+import {overlayDownloadUrl} from "../common/overlay-config.ts";
 import {t} from "../common/translation-util.ts";
-
-import {linuxUpdateNotification} from "./linuxupdater.ts"; // Required only in case of linux
 
 let quitting = false;
 
@@ -22,27 +20,31 @@ export function shouldQuitForUpdate(): boolean {
 }
 
 export async function appUpdater(updateFromMenu = false): Promise<void> {
-  // Zulip overlay: this fork does not update itself. Upstream's updater
-  // would offer official Zulip releases, which lack the overlay; instead the
-  // overlay service tells the app when a newer build exists.
-  if (overlayHosts.length > 0) {
-    if (updateFromMenu) {
-      void dialog.showMessageBox({
-        message: `${app.name} ${app.getVersion()} does not update itself. If a newer version exists, a notice appears inside the app.`,
-      });
-    }
-
-    return;
-  }
-
   // Don't initiate auto-updates in development
   if (!app.isPackaged) {
     return;
   }
 
-  if (process.platform === "linux" && !("APPIMAGE" in process.env)) {
-    const ses = session.fromPartition("persist:webviewsession");
-    await linuxUpdateNotification(ses);
+  // Zulip overlay: updates come from this fork's own GitHub releases (the
+  // `publish` setting in package.json), never from Zulip's. Two cases cannot
+  // update themselves: macOS, where the updater needs an Apple Developer ID
+  // signature this build lacks, and a Linux copy that is not an AppImage.
+  // There the overlay's in-page notice says when a newer version exists.
+  if (
+    process.platform === "darwin" ||
+    (process.platform === "linux" && !("APPIMAGE" in process.env))
+  ) {
+    if (updateFromMenu) {
+      const {response} = await dialog.showMessageBox({
+        buttons: ["Open the download page", "Cancel"],
+        message: `${app.name} ${app.getVersion()} cannot update itself on this system.`,
+        detail: `Newer versions are at ${overlayDownloadUrl}`,
+      });
+      if (response === 0) {
+        await shell.openExternal(overlayDownloadUrl);
+      }
+    }
+
     return;
   }
 
@@ -109,7 +111,7 @@ export async function appUpdater(updateFromMenu = false): Promise<void> {
       const messageText = updateAvailable
         ? t.__("Unable to download the update.")
         : t.__("Unable to check for updates.");
-      const link = "https://zulip.com/apps/";
+      const link = overlayDownloadUrl;
       (async () => {
         const {response} = await dialog.showMessageBox({
           type: "error",

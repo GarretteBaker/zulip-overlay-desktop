@@ -15,6 +15,11 @@ export const overlayServiceUrl =
 // newer upstream release.
 export const upstreamVersion = "5.14.2";
 
+// Where people download this app. The updater's own address is the `publish`
+// setting in package.json.
+export const overlayDownloadUrl =
+  "https://github.com/GarretteBaker/zulip-overlay-desktop/releases";
+
 export function isOverlayUrl(url: string): boolean {
   return URL.canParse(url) && overlayHosts.includes(new URL(url).host);
 }
