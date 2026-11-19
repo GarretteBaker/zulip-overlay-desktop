@@ -11,6 +11,10 @@ export const overlayHosts = (
 export const overlayServiceUrl =
   process.env.ZULIP_OVERLAY_SERVICE ?? "https://mcp.iliad.ac/overlay";
 
+// The zulip-desktop release this fork is based on. Change it when merging a
+// newer upstream release.
+export const upstreamVersion = "5.14.2";
+
 export function isOverlayUrl(url: string): boolean {
   return URL.canParse(url) && overlayHosts.includes(new URL(url).host);
 }

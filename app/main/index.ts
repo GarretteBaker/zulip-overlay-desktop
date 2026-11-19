@@ -18,7 +18,11 @@ import * as remoteMain from "@electron/remote/main";
 import windowStateKeeper from "electron-window-state";
 
 import * as ConfigUtil from "../common/config-util.ts";
-import {isOverlayUrl, overlayServiceUrl} from "../common/overlay-config.ts";
+import {
+  isOverlayUrl,
+  overlayServiceUrl,
+  upstreamVersion,
+} from "../common/overlay-config.ts";
 import {bundlePath, bundleUrl, publicPath} from "../common/paths.ts";
 import {t} from "../common/translation-util.ts";
 import type {RendererMessage} from "../common/typed-ipc.ts";
@@ -189,7 +193,11 @@ function createMainWindow(): BrowserWindow {
   });
 
   const ses = session.fromPartition("persist:webviewsession");
-  ses.setUserAgent(`ZulipElectron/${app.getVersion()} ${ses.getUserAgent()}`);
+  // Zulip overlay: the server reads the version after "ZulipElectron/" and
+  // turns away desktop apps it considers too old, so this must be the
+  // upstream release the fork is based on, not the fork's own version. The
+  // rest of the string still names this app and its version.
+  ses.setUserAgent(`ZulipElectron/${upstreamVersion} ${ses.getUserAgent()}`);
 
   function configureSpellChecker() {
     const enable = ConfigUtil.getConfigItem("enableSpellchecker", true);
