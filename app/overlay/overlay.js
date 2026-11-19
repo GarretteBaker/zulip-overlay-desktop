@@ -39,6 +39,13 @@
 // the time-gap threshold and the six one-click emoji (localStorage).
 // Without the overlay service only votes and inline reactions are hidden; the
 // service is retried every ten seconds.
+// Signing in to the service: the script asks it for a one-time code, sends
+// the code as a Zulip direct message to the overlay's bot with the page's own
+// session, and gets a token back once the bot has seen who sent it. The token
+// is kept in localStorage. No Zulip credential goes to the service.
+// Votes and inline reactions are offered only in public channels (and any
+// private channel the service names); elsewhere their controls are not drawn
+// and the service is not told which messages are on screen.
 
 (() => {
   if (globalThis.__zulipOverlay) {
@@ -114,8 +121,14 @@
     settings: undefined, // Parsed copy of localStorage "zo-settings"
     broken: new Set(), // Features turned off because the page changed
     messages: new Map(), // Message id -> Promise of {streamId, topic, text}
+    signingIn: undefined, // The sign-in in flight, so only one runs at a time
+    signInFailed: false, // The service refused us; do not keep asking
+    extraStreams: new Set(), // Private channels the service accepts
+    covered: new Map(), // Channel id -> true/false, or a Promise of it
+    uncovered: new Set(), // Message ids on the page the service must not see
   };
-  globalThis.__zulipOverlay = {version: "0.2.0-prototype", state};
+  const VERSION = "0.3.0-beta";
+  globalThis.__zulipOverlay = {version: VERSION, state};
 
   function element(tag, className, text) {
     const $element = document.createElement(tag);
@@ -381,11 +394,21 @@
       return;
     }
 
+    // Refused rather than unreachable: the reason is already on screen and
+    // asking again would not change it.
+    if (state.signInFailed) {
+      return;
+    }
+
     notice(
       "the overlay service cannot be reached; votes and inline reactions are hidden until it is back",
     );
     // Keep looking for the service, so its controls come back by themselves.
     state.retryTimer ??= setInterval(async () => {
+      if (state.signInFailed) {
+        return;
+      }
+
       const back =
         state.token === undefined
           ? await signIn()
@@ -399,27 +422,170 @@
 
   // ------------------------------------------------------ service and Zulip
 
-  // PROTOTYPE: dev-only sign-in that trusts the user id we send. The real
-  // exchange sends a one-time code as a Zulip DM to the overlay's bot.
-  async function signIn() {
-    const response = await bridge.request("POST", "/dev/login", {
-      user_id: state.userId,
+  // True once the service knows who we are. One sign-in runs at a time.
+  function signIn() {
+    state.signingIn ??= exchange().finally(() => {
+      state.signingIn = undefined;
     });
-    if (response.status === 200) {
-      state.token = response.body.token;
+    return state.signingIn;
+  }
+
+  function compareVersions(a, b) {
+    const parts = (version) =>
+      version.split("-")[0].split(".").map(Number);
+    const [left, right] = [parts(a), parts(b)];
+    for (let index = 0; index < 3; index += 1) {
+      if ((left[index] ?? 0) !== (right[index] ?? 0)) {
+        return (left[index] ?? 0) - (right[index] ?? 0);
+      }
     }
 
-    return response.status === 200;
+    return 0;
+  }
+
+  async function exchange() {
+    const health = await bridge.request("GET", "/health");
+    if (health.status !== 200) {
+      return false;
+    }
+
+    state.extraStreams = new Set(health.body.extra_streams ?? []);
+    const latest = health.body.latest_version;
+    if (
+      typeof latest === "string" &&
+      compareVersions(VERSION, latest) < 0 &&
+      !state.updateNoticed
+    ) {
+      state.updateNoticed = true;
+      const where = health.body.download_url;
+      notice(
+        `a newer version of this app (${latest}) is available${typeof where === "string" ? ` at ${where}` : ""}`,
+      );
+    }
+
+    // A service run for development on this machine trusts the id we send.
+    if (health.body.dev_auth === true) {
+      const response = await bridge.request("POST", "/dev/login", {
+        user_id: state.userId,
+      });
+      state.token = response.status === 200 ? response.body.token : undefined;
+      return response.status === 200;
+    }
+
+    // A token from an earlier run, if the service still accepts it for this
+    // Zulip account.
+    const tokenKey = `zo-token-${state.userId}`;
+    const stored = localStorage.getItem(tokenKey);
+    if (stored !== null) {
+      const me = await bridge.request("GET", "/auth/me", undefined, stored);
+      if (me.status === 200 && me.body.user_id === state.userId) {
+        state.token = stored;
+        return true;
+      }
+
+      if (me.status === 0) {
+        return false;
+      }
+
+      localStorage.removeItem(tokenKey);
+      if (me.status === 403) {
+        return refused(me);
+      }
+    }
+
+    const started = await bridge.request("POST", "/auth/start");
+    if (started.status !== 200) {
+      return started.status === 0 ? false : refused(started);
+    }
+
+    const sent = await zulipWrite("POST", "/messages", {
+      type: "direct",
+      to: JSON.stringify([started.body.bot_user_id]),
+      content: started.body.code,
+    });
+    if (!sent) {
+      state.signInFailed = true;
+      return false;
+    }
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const finished = await bridge.request("POST", "/auth/finish", {
+        code: started.body.code,
+      });
+      if (finished.status === 200 && finished.body.user_id === state.userId) {
+        state.token = finished.body.token;
+        localStorage.setItem(tokenKey, state.token);
+        return true;
+      }
+
+      if (finished.status !== 404) {
+        return finished.status === 0 ? false : refused(finished);
+      }
+
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1500);
+      });
+    }
+
+    state.signInFailed = true;
+    notice(
+      "could not sign in to the overlay service (its bot did not receive the code); votes and inline reactions are off until the app is restarted",
+    );
+    return false;
+  }
+
+  // The service answered and said no. Say why once and stop asking, so a
+  // refusal does not turn into a direct message to the bot every ten seconds.
+  function refused(response) {
+    state.signInFailed = true;
+    state.token = undefined;
+    const detail = response.body?.detail;
+    notice(
+      `${typeof detail === "string" ? detail : `the overlay service refused sign-in (${response.status})`}; votes and inline reactions are off`,
+    );
+    return false;
+  }
+
+  // Whether the service takes votes and inline reactions for this channel:
+  // public channels, plus any private ones it names.
+  function covers(streamId) {
+    if (streamId === undefined || Number.isNaN(streamId)) {
+      return Promise.resolve(false);
+    }
+
+    if (!state.covered.has(streamId)) {
+      state.covered.set(
+        streamId,
+        zulipGet(`/streams/${streamId}`).then((result) => {
+          const covered =
+            state.extraStreams.has(streamId) ||
+            result?.stream?.invite_only === false;
+          state.covered.set(streamId, covered);
+          return covered;
+        }),
+      );
+    }
+
+    return Promise.resolve(state.covered.get(streamId));
   }
 
   // Returns the parsed body, or undefined when the service is unreachable or
   // answers with an error. Both cases are reported to the user.
   async function service(method, path, body) {
+    if (state.token === undefined) {
+      return undefined;
+    }
+
     let response = await bridge.request(method, path, body, state.token);
-    if (response.status === 401 && path !== "/dev/login") {
-      // The service no longer knows our token (it was restarted on a new
-      // database, say). Sign in again and repeat the request once.
-      await signIn();
+    if (response.status === 401 && !state.signInFailed) {
+      // The service no longer knows our token (it expired, or the service
+      // was restarted on a new database). Sign in again and repeat once.
+      state.token = undefined;
+      if (!(await signIn())) {
+        setServiceUp(false);
+        return undefined;
+      }
+
       response = await bridge.request(method, path, body, state.token);
     }
 
@@ -729,6 +895,10 @@
 
     void findThreads(streamId, topic);
 
+    if (!(await covers(streamId))) {
+      return;
+    }
+
     let anchor = await topicAnchor(streamId, topic);
     for (let attempt = 0; anchor === undefined && attempt < 5; attempt += 1) {
       state.anchors.delete(topicKey(streamId, topic));
@@ -920,7 +1090,19 @@
       ...$list.querySelectorAll(":scope > li.topic-list-item[data-topic-name]"),
     ];
     const nesting = isOn("threads");
-    const sorting = isOn("votes");
+    const listStreamId = $items.at(0)?.querySelector("[data-stream-id]")
+      ?.dataset.streamId;
+    // Sorting by votes is offered once the channel is known to be one the
+    // service covers; the list is drawn again when that is learned.
+    const coverage =
+      listStreamId === undefined
+        ? false
+        : state.covered.get(Number(listStreamId));
+    if (listStreamId !== undefined && coverage === undefined) {
+      void covers(Number(listStreamId)).then(scheduleNest);
+    }
+
+    const sorting = isOn("votes") && coverage === true;
     if (
       nesting &&
       $items.length > 0 &&
@@ -983,8 +1165,6 @@
       }
     }
 
-    const listStreamId = $items.at(0)?.querySelector("[data-stream-id]")
-      ?.dataset.streamId;
     if (!nesting && !sorting) {
       for (const $item of $items) {
         $item.querySelector(":scope .zo-fold")?.remove();
@@ -1870,7 +2050,8 @@
     if (
       $row === null ||
       $row === undefined ||
-      $row.classList.contains("private-message")
+      $row.classList.contains("private-message") ||
+      $row.dataset.zoUncovered !== undefined
     ) {
       return undefined;
     }
@@ -1998,11 +2179,14 @@
     }
 
     const needMeta = ids.message.filter((id) => !state.meta.has(id));
+    const served = ids.message.filter((id) => !state.uncovered.has(id));
     const [scores, inline, messages] = await Promise.all([
-      service("POST", "/scores", {topics: ids.topic, messages: ids.message}),
-      ids.message.length === 0
+      ids.topic.length + served.length === 0
         ? undefined
-        : service("POST", "/inline/query", {ids: ids.message}),
+        : service("POST", "/scores", {topics: ids.topic, messages: served}),
+      served.length === 0
+        ? undefined
+        : service("POST", "/inline/query", {ids: served}),
       needMeta.length === 0
         ? undefined
         : zulipGet("/messages", {
@@ -2177,7 +2361,19 @@
       renderInline($row, id);
     }
 
-    queue("message", id);
+    // Outside the channels the service covers, take the vote controls away
+    // and keep this message's id from the service; the rest still needs the
+    // message's details from Zulip.
+    void covers(headerOf($row)?.streamId).then((covered) => {
+      if (!covered) {
+        state.uncovered.add(id);
+        $row.dataset.zoUncovered = "";
+        $votes.remove();
+        $static.remove();
+      }
+
+      queue("message", id);
+    });
   }
 
   // ------------------------------------------------------- AI spoiler tint
@@ -2247,11 +2443,7 @@
 
   async function start() {
     // Not signed in (login page, logged-out view): leave the page stock.
-    const developmentUserId = globalThis.__zulipOverlayDevUserId;
-    const me =
-      developmentUserId === undefined
-        ? await zulipGet("/users/me")
-        : {user_id: developmentUserId};
+    const me = await zulipGet("/users/me");
     if (me === undefined) {
       return;
     }

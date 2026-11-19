@@ -7,10 +7,7 @@ import assert from "minimalistic-assert";
 
 import * as ConfigUtil from "../../../common/config-util.ts";
 import {type Html, html} from "../../../common/html.ts";
-import {
-  isOverlayUrl,
-  overlayDevUserId,
-} from "../../../common/overlay-config.ts";
+import {isOverlayUrl} from "../../../common/overlay-config.ts";
 import {t} from "../../../common/translation-util.ts";
 import type {RendererMessage} from "../../../common/typed-ipc.ts";
 import type {TabRole} from "../../../common/types.ts";
@@ -185,11 +182,7 @@ export default class WebView {
       // Runs on every full page load; the script guards against running twice.
       if (isOverlayUrl(webContents.getURL())) {
         void webContents.insertCSS(overlayCss);
-        const developmentUser =
-          overlayDevUserId === undefined
-            ? ""
-            : `globalThis.__zulipOverlayDevUserId = ${Number(overlayDevUserId)};\n`;
-        void webContents.executeJavaScript(developmentUser + overlayJs);
+        void webContents.executeJavaScript(overlayJs);
       }
 
       this.loading = false;
