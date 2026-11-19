@@ -503,22 +503,31 @@
       to: JSON.stringify([started.body.bot_user_id]),
       content: started.body.code,
     });
-    if (!sent) {
+    if (sent === false) {
       state.signInFailed = true;
       return false;
     }
+
+    // The message has done its job once the service has answered, whatever
+    // the answer: take it out of the user's direct messages again. If the
+    // organization does not let people delete their messages it stays.
+    const tidy = () => {
+      void zulipWrite("DELETE", `/messages/${sent.id}`, {}, true);
+    };
 
     for (let attempt = 0; attempt < 8; attempt += 1) {
       const finished = await bridge.request("POST", "/auth/finish", {
         code: started.body.code,
       });
       if (finished.status === 200 && finished.body.user_id === state.userId) {
+        tidy();
         state.token = finished.body.token;
         localStorage.setItem(tokenKey, state.token);
         return true;
       }
 
       if (finished.status !== 404) {
+        tidy();
         return finished.status === 0 ? false : refused(finished);
       }
 
@@ -527,6 +536,7 @@
       });
     }
 
+    tidy();
     state.signInFailed = true;
     notice(
       "could not sign in to the overlay service (its bot did not receive the code); votes and inline reactions are off until the app is restarted",
@@ -619,9 +629,11 @@
   }
 
   // Same-origin write to Zulip, exactly as the stock page does it: the
-  // session cookie plus the page's own request token. Used only for adding
-  // and removing an emoji reaction.
-  async function zulipWrite(method, path, parameters) {
+  // session cookie plus the page's own request token. Used for adding and
+  // removing an emoji reaction, and for the sign-in message to the overlay's
+  // bot. Returns false when Zulip refuses, otherwise Zulip's answer.
+  // `quiet` leaves a refusal unreported.
+  async function zulipWrite(method, path, parameters, quiet = false) {
     const token = document.querySelector(
       'input[name="csrfmiddlewaretoken"]',
     )?.value;
@@ -639,10 +651,14 @@
       },
     );
     if (!response.ok) {
-      notice(`Zulip refused the request (${response.status})`);
+      if (!quiet) {
+        notice(`Zulip refused the request (${response.status})`);
+      }
+
+      return false;
     }
 
-    return response.ok;
+    return response.json();
   }
 
   function user(userId) {
