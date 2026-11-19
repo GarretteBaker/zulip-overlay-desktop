@@ -57,6 +57,9 @@ jobs:
           # Do not look for a Developer ID or a Windows certificate.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: pnpm exec electron-builder ${{ matrix.flags }} --publish=never
+      - name: Write the macOS update manifest
+        if: runner.os == 'macOS'
+        run: node tools/overlay-mac-manifest.mjs dist
       - uses: actions/upload-artifact@v4
         with:
           name: iliad-overlay-${{ runner.os }}
@@ -70,12 +73,14 @@ jobs:
             dist/*.blockmap
             dist/latest.yml
             dist/latest-linux.yml
+            dist/Iliad-Overlay-*.zip
+            dist/mac-update.json
 
   # On a tag, gather the installers into a GitHub release. It must not be a
   # pre-release: installed apps update from releases/latest/download, and
   # GitHub's "latest" skips pre-releases. latest.yml (Windows) and
-  # latest-linux.yml tell the updater which file to fetch; macOS has none
-  # because that build cannot update itself.
+  # latest-linux.yml tell the stock updater which file to fetch;
+  # mac-update.json tells the app's own macOS updater.
   release:
     if: startsWith(github.ref, 'refs/tags/overlay-v')
     needs: build
@@ -101,7 +106,7 @@ jobs:
           - **Windows**: SmartScreen warns about an unknown publisher; choose "More info" → "Run anyway".
           - **Linux**: make the AppImage executable and run it.
 
-          Windows and Linux AppImage installs update themselves from here. macOS installs do not; the app shows a notice when a newer version exists.
+          Installed copies update themselves from here (on macOS only once the app has been moved to Applications; on Linux only the AppImage).
 
           Votes and inline reactions work only for people on the service's list of users; everything else works for anyone in the organization.
           NOTES

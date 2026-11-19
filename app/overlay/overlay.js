@@ -127,7 +127,7 @@
     covered: new Map(), // Channel id -> true/false, or a Promise of it
     uncovered: new Set(), // Message ids on the page the service must not see
   };
-  const VERSION = "0.3.1-alpha";
+  const VERSION = "0.3.2-alpha";
   globalThis.__zulipOverlay = {version: VERSION, state};
 
   function element(tag, className, text) {

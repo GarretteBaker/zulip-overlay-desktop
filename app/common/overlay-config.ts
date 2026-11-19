@@ -20,6 +20,14 @@ export const upstreamVersion = "5.14.2";
 export const overlayDownloadUrl =
   "https://github.com/GarretteBaker/zulip-overlay-desktop/releases";
 
+// Where the macOS updater looks for mac-update.json and the zip it names:
+// the newest release that is not a pre-release. Must match the `publish`
+// address in package.json, which the Windows and Linux updater uses.
+// ILIAD_OVERLAY_UPDATE_URL points it elsewhere for the update test.
+export const overlayUpdateUrl =
+  process.env.ILIAD_OVERLAY_UPDATE_URL ??
+  "https://github.com/GarretteBaker/zulip-overlay-desktop/releases/latest/download";
+
 export function isOverlayUrl(url: string): boolean {
   return URL.canParse(url) && overlayHosts.includes(new URL(url).host);
 }

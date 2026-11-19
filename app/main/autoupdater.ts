@@ -13,6 +13,8 @@ import * as ConfigUtil from "../common/config-util.ts";
 import {overlayDownloadUrl} from "../common/overlay-config.ts";
 import {t} from "../common/translation-util.ts";
 
+import {macUpdate} from "./mac-updater.ts";
+
 let quitting = false;
 
 export function shouldQuitForUpdate(): boolean {
@@ -25,19 +27,33 @@ export async function appUpdater(updateFromMenu = false): Promise<void> {
     return;
   }
 
-  // Zulip overlay: updates come from this fork's own GitHub releases (the
-  // `publish` setting in package.json), never from Zulip's. Two cases cannot
-  // update themselves: macOS, where the updater needs an Apple Developer ID
-  // signature this build lacks, and a Linux copy that is not an AppImage.
-  // There the overlay's in-page notice says when a newer version exists.
-  if (
-    process.platform === "darwin" ||
-    (process.platform === "linux" && !("APPIMAGE" in process.env))
-  ) {
+  // Zulip overlay: updates come from this fork's own GitHub releases, never
+  // from Zulip's. Windows and a Linux AppImage use the stock updater below
+  // (the `publish` setting in package.json). macOS has its own updater,
+  // because the stock one needs an Apple Developer ID signature this build
+  // lacks. A Linux copy that is not an AppImage cannot update itself; there
+  // the overlay's in-page notice says when a newer version exists.
+  if (process.platform === "darwin") {
+    await macUpdate(updateFromMenu, () => {
+      quitting = true;
+    }).catch(async (error: unknown) => {
+      log.error("macOS update failed", error);
+      if (updateFromMenu) {
+        await dialog.showMessageBox({
+          type: "error",
+          message: "Unable to update.",
+          detail: `${String(error)}\n\nThe latest version is at ${overlayDownloadUrl}`,
+        });
+      }
+    });
+    return;
+  }
+
+  if (process.platform === "linux" && !("APPIMAGE" in process.env)) {
     if (updateFromMenu) {
       const {response} = await dialog.showMessageBox({
         buttons: ["Open the download page", "Cancel"],
-        message: `${app.name} ${app.getVersion()} cannot update itself on this system.`,
+        message: `${app.name} ${app.getVersion()} cannot update itself unless it is run as an AppImage.`,
         detail: `Newer versions are at ${overlayDownloadUrl}`,
       });
       if (response === 0) {
