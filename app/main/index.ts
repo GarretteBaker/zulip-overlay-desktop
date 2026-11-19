@@ -29,7 +29,6 @@ import * as BadgeSettings from "./badge-settings.ts";
 import handleExternalLink from "./handle-external-link.ts";
 import * as AppMenu from "./menu.ts";
 import {_getServerSettings, _isOnline, _saveServerIcon} from "./request.ts";
-import {sentryInit} from "./sentry.ts";
 import {setAutoLaunch} from "./startup.ts";
 import {
   setTrayEnabled,
@@ -42,8 +41,8 @@ import "gatemaker/electron-setup.js"; // eslint-disable-line import-x/no-unassig
 
 const {GDK_BACKEND} = process.env;
 
-// Initialize sentry for main process
-sentryInit();
+// Zulip overlay: no crash reporting. Upstream's Sentry project belongs to
+// Zulip, and this fork's crashes are not theirs to triage.
 
 let mainWindowState: windowStateKeeper.State;
 
@@ -72,7 +71,7 @@ function createMainWindow(): BrowserWindow {
 
   const win = new BrowserWindow({
     // This settings needs to be saved in config
-    title: "Zulip",
+    title: app.name,
     icon: iconPath(),
     x: mainWindowState.x,
     y: mainWindowState.y,
@@ -119,7 +118,7 @@ function createMainWindow(): BrowserWindow {
     }
   });
 
-  win.setTitle("Zulip");
+  win.setTitle(app.name);
 
   win.on("enter-full-screen", () => {
     send(win.webContents, "enter-fullscreen");
@@ -157,7 +156,7 @@ function createMainWindow(): BrowserWindow {
   }
 
   // Used for notifications on Windows
-  app.setAppUserModelId("org.zulip.zulip-electron");
+  app.setAppUserModelId("ac.iliad.overlay");
 
   remoteMain.initialize();
 
@@ -471,7 +470,7 @@ function createMainWindow(): BrowserWindow {
       properties.activeTabIndex !== undefined &&
       (activeTab = properties.tabs[properties.activeTabIndex]) !== undefined
     ) {
-      mainWindow.setTitle(`Zulip Overlay (prototype) - ${activeTab.label}`);
+      mainWindow.setTitle(`${app.name} - ${activeTab.label}`);
     }
   });
 

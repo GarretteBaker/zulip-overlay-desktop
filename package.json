@@ -1,12 +1,12 @@
 {
-  "name": "zulip",
-  "version": "5.14.2",
+  "name": "iliad-overlay",
+  "version": "0.3.0",
   "private": true,
-  "description": "Zulip Desktop App",
+  "description": "Iliad Overlay: an unofficial Zulip desktop client with votes, replies, threads and inline reactions",
   "license": "Apache-2.0",
-  "repository": "github:zulip/zulip-desktop",
-  "bugs": "https://github.com/zulip/zulip-desktop/issues",
-  "author": "Kandra Labs, Inc. <support@zulip.com>",
+  "repository": "github:GarretteBaker/zulip-overlay-desktop",
+  "bugs": "https://github.com/GarretteBaker/zulip-overlay-desktop/issues",
+  "author": "Iliad",
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {
@@ -73,11 +73,11 @@
     "xo": "^5.0.0",
     "zod": "^4.1.5"
   },
-  "productName": "Zulip",
-  "desktopName": "org.zulip.Zulip.desktop",
-  "copyright": "Kandra Labs, Inc.",
+  "productName": "Iliad Overlay",
+  "desktopName": "ac.iliad.Overlay.desktop",
+  "copyright": "Kandra Labs, Inc. and Iliad",
   "build": {
-    "appId": "org.zulip.zulip-electron",
+    "appId": "ac.iliad.overlay",
     "asar": true,
     "asarUnpack": [
       "**/*.node"
@@ -85,27 +85,16 @@
     "files": [
       "out/**/*"
     ],
-    "copyright": "©2020 Kandra Labs, Inc.",
+    "copyright": "©2020 Kandra Labs, Inc.; overlay ©2026 Iliad",
     "toolsets": {
       "appimage": "1.0.3"
-    },
-    "publish": {
-      "provider": "github",
-      "releaseType": "draft"
     },
     "mac": {
       "category": "public.app-category.productivity",
       "icon": "build/icon-macos.png",
       "target": [
         {
-          "target": "default",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        },
-        {
-          "target": "pkg",
+          "target": "dmg",
           "arch": [
             "x64",
             "arm64"
@@ -113,87 +102,37 @@
         }
       ],
       "darkModeSupport": true,
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "artifactName": "Iliad-Overlay-${version}-${arch}.${ext}"
     },
     "linux": {
       "category": "Chat;GNOME;GTK;Network;InstantMessaging",
       "icon": "build/zulip.png",
-      "description": "Zulip Desktop Client for Linux",
+      "description": "Unofficial Zulip desktop client with the Iliad overlay",
       "target": [
-        "deb",
-        "tar.xz",
         "AppImage",
-        "snap"
+        "tar.xz"
       ],
-      "maintainer": "Akash Nimare <akash@zulip.com>",
-      "artifactName": "${productName}-${version}-${arch}.${ext}",
+      "maintainer": "Iliad",
+      "artifactName": "Iliad-Overlay-${version}-${arch}.${ext}",
       "syncDesktopName": true
     },
-    "deb": {
-      "packageCategory": "net",
-      "synopsis": "Zulip Desktop App",
-      "afterInstall": "./packaging/deb-after-install.sh",
-      "fpm": [
-        "./packaging/deb-apt.sources=/etc/apt/sources.list.d/zulip-desktop.sources",
-        "./packaging/deb-apt.asc=/usr/share/keyrings/zulip-desktop.asc",
-        "./packaging/deb-release-upgrades.cfg=/etc/update-manager/release-upgrades.d/zulip-desktop.cfg"
-      ]
-    },
-    "snapcraft": {
-      "base": "core24",
-      "publish": {
-        "provider": "github",
-        "releaseType": "draft"
-      },
-      "core24": {
-        "extensions": [
-          "gnome"
-        ],
-        "plugs": [
-          "default",
-          "browser-support"
-        ]
-      }
-    },
-    "dmg": {
-      "background": "build/dmg-background.tiff",
-      "icon": "build/dmg-icon.icns"
-    },
+    "dmg": {},
     "win": {
       "target": [
         {
-          "target": "nsis-web",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "msi",
+          "target": "nsis",
           "arch": [
             "x64"
           ]
         }
       ],
-      "icon": "build/icon.ico",
-      "azureSignOptions": {
-        "endpoint": "https://eus.codesigning.azure.net/",
-        "codeSigningAccountName": "kandralabs",
-        "certificateProfileName": "kandralabs",
-        "publisherName": "Kandra Labs, Inc.",
-        "timestampRfc3161": "http://timestamp.acs.microsoft.com",
-        "timestampDigest": "SHA256"
-      }
-    },
-    "msi": {
-      "artifactName": "${productName}-${version}-${arch}.${ext}"
+      "icon": "build/icon.ico"
     },
     "nsis": {
       "allowToChangeInstallationDirectory": true,
       "oneClick": false,
-      "perMachine": false
-    },
-    "nsisWeb": {
-      "artifactName": "${productName}-Web-Setup-${version}.${ext}"
+      "perMachine": false,
+      "artifactName": "Iliad-Overlay-Setup-${version}.${ext}"
     }
   },
   "prettier": {

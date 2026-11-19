@@ -10,6 +10,7 @@ import {
 } from "electron-updater";
 
 import * as ConfigUtil from "../common/config-util.ts";
+import {overlayHosts} from "../common/overlay-config.ts";
 import {t} from "../common/translation-util.ts";
 
 import {linuxUpdateNotification} from "./linuxupdater.ts"; // Required only in case of linux
@@ -21,6 +22,19 @@ export function shouldQuitForUpdate(): boolean {
 }
 
 export async function appUpdater(updateFromMenu = false): Promise<void> {
+  // Zulip overlay: this fork does not update itself. Upstream's updater
+  // would offer official Zulip releases, which lack the overlay; instead the
+  // overlay service tells the app when a newer build exists.
+  if (overlayHosts.length > 0) {
+    if (updateFromMenu) {
+      void dialog.showMessageBox({
+        message: `${app.name} ${app.getVersion()} does not update itself. If a newer version exists, a notice appears inside the app.`,
+      });
+    }
+
+    return;
+  }
+
   // Don't initiate auto-updates in development
   if (!app.isPackaged) {
     return;
