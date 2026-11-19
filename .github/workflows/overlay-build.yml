@@ -1,0 +1,67 @@
+name: Overlay build
+
+# Builds the Iliad Overlay installers for Linux, macOS and Windows and keeps
+# them as workflow artifacts. Nothing is published and nothing is signed with
+# a paid certificate: macOS gets an ad-hoc signature (Apple-silicon Macs
+# refuse to run unsigned code at all), so users still approve the app once in
+# System Settings; Windows shows a SmartScreen warning.
+#
+# Run it from the Actions tab, or push a tag named overlay-v<version>.
+
+on:
+  workflow_dispatch:
+  push:
+    tags: ["overlay-v[0-9]*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: overlay-build-${{ github.ref }}
+
+defaults:
+  run:
+    shell: bash
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-24.04
+            flags: --linux
+          - os: macos-latest
+            flags: --mac -c.mac.identity=-
+          - os: windows-latest
+            flags: --win
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          run_install: false
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version: lts/*
+          package-manager-cache: false
+      - run: pnpm install --frozen-lockfile
+      - run: node --run build
+      - name: Package
+        env:
+          # Do not look for a Developer ID or a Windows certificate.
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+        run: pnpm exec electron-builder ${{ matrix.flags }} --publish=never
+      - uses: actions/upload-artifact@v4
+        with:
+          name: iliad-overlay-${{ runner.os }}
+          if-no-files-found: error
+          retention-days: 30
+          path: |
+            dist/*.AppImage
+            dist/*.tar.xz
+            dist/*.dmg
+            dist/*.exe
