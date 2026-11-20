@@ -127,7 +127,7 @@
     covered: new Map(), // Channel id -> true/false, or a Promise of it
     uncovered: new Set(), // Message ids on the page the service must not see
   };
-  const VERSION = "0.3.2-alpha";
+  const VERSION = "0.3.3-alpha";
   globalThis.__zulipOverlay = {version: VERSION, state};
 
   function element(tag, className, text) {
@@ -1114,7 +1114,10 @@
       listStreamId === undefined
         ? false
         : state.covered.get(Number(listStreamId));
-    if (listStreamId !== undefined && coverage === undefined) {
+    // Not known yet: either nobody has asked, or the answer is on its way
+    // (the entry is then a promise, because a message in this channel was
+    // drawn first). Either way, draw the list again when it arrives.
+    if (listStreamId !== undefined && typeof coverage !== "boolean") {
       void covers(Number(listStreamId)).then(scheduleNest);
     }
 
