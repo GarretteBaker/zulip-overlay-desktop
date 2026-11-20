@@ -66,6 +66,32 @@ jobs:
             (cd "extension/dist/$browser" && zip -qr "../../../dist/Iliad-Overlay-extension-$browser-$version.zip" .)
           done
           ls -la dist/*.zip
+      # With Mozilla API keys in the repository's secrets (AMO_JWT_ISSUER,
+      # AMO_JWT_SECRET, from addons.mozilla.org → Tools → Manage API Keys),
+      # have Mozilla sign the Firefox add-on for distribution outside its
+      # store, and write the file installed copies read to find updates.
+      # Without the keys this step does nothing and Firefox stays unsigned.
+      - name: Sign the Firefox add-on
+        if: runner.os == 'Linux'
+        env:
+          WEB_EXT_API_KEY: ${{ secrets.AMO_JWT_ISSUER }}
+          WEB_EXT_API_SECRET: ${{ secrets.AMO_JWT_SECRET }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          if [ -z "$WEB_EXT_API_KEY" ] || [ -z "$WEB_EXT_API_SECRET" ]; then
+            echo "No Mozilla API keys; the Firefox add-on is not signed."
+            exit 0
+          fi
+          version="$(node -p 'require("./package.json").version')"
+          pnpm dlx web-ext sign --channel unlisted --source-dir extension/dist/firefox-selfhosted --artifacts-dir signed
+          xpi="Iliad-Overlay-firefox-$version.xpi"
+          mv signed/*.xpi "dist/$xpi"
+          node -e '
+            const [version, xpi, repository] = process.argv.slice(1);
+            const link = `https://github.com/${repository}/releases/download/overlay-v${version}/${xpi}`;
+            console.log(JSON.stringify({addons: {"overlay@iliad.ac": {updates: [{version, update_link: link}]}}}, undefined, 2));
+          ' "$version" "$xpi" "$REPOSITORY" >dist/firefox-updates.json
+          cat dist/firefox-updates.json
       - name: Write the macOS update manifest
         if: runner.os == 'macOS'
         run: node tools/overlay-mac-manifest.mjs dist
@@ -84,6 +110,8 @@ jobs:
             dist/latest-linux.yml
             dist/Iliad-Overlay-*.zip
             dist/mac-update.json
+            dist/Iliad-Overlay-*.xpi
+            dist/firefox-updates.json
 
   # On a tag, gather the installers into a GitHub release. It must not be a
   # pre-release: installed apps update from releases/latest/download, and

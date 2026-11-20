@@ -8,7 +8,7 @@ browser engine runs.
 | --- | --- |
 | `bridge.js` | Gives the overlay script the `zulip_overlay.request` call the desktop app's preload script provides. |
 | `background.js` | Relays those requests to the overlay service; the Zulip page's content security policy does not let the page do it. |
-| `build.mjs` | Writes `dist/chromium` and `dist/firefox` (they differ only in the manifest). `--test` adds builds that run logged out on chat.zulip.org against a service on this machine. |
+| `build.mjs` | Writes `dist/chromium`, `dist/firefox` and `dist/firefox-selfhosted` (they differ only in the manifest). `--test` adds builds that run logged out on chat.zulip.org against a service on this machine. |
 | `spectator-shim.js` | Test builds only. |
 
 The extension asks for no permissions beyond running on the organization's Zulip pages. The
@@ -25,16 +25,24 @@ overlay service accepts cross-origin calls, which a token authorises, not a cook
   `extension/dist/firefox/manifest.json`. Firefox removes it on restart; a permanent install needs
   the add-on signed by Mozilla.
 
-## Publishing (not done yet; needs Garrett's accounts)
+## Self-update (not switched on yet; needs Garrett's accounts)
 
-- **Chrome Web Store**: a developer account (5 USD once), upload the chromium zip. Reviewed before
-  listing and on every update.
-- **Firefox Add-ons**: an account at addons.mozilla.org, upload the firefox zip (listed), or
-  `web-ext sign --channel unlisted` with API keys for a signed file to hand out. The manifest's
-  add-on id is `overlay@iliad.ac`; it declares that sign-in information and website activity
-  (votes, inline reactions) go to the overlay service.
+A browser only updates an extension it got from a source it trusts. "Load unpacked" and temporary
+add-ons never update.
 
-Once listed, the browser updates the extension itself.
+- **Firefox**: add the repository secrets `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` (a free Mozilla
+  account → addons.mozilla.org → Tools → Manage API Keys). The release workflow then has Mozilla
+  sign `dist/firefox-selfhosted` for distribution outside its store and publishes
+  `Iliad-Overlay-firefox-<version>.xpi` with `firefox-updates.json`. People install the `.xpi`
+  once; Firefox then updates it from each new release. No store listing or manual review.
+- **Chrome and the rest of that family**: only the Chrome Web Store updates extensions on Windows
+  and macOS. It takes a developer account (5 USD once) and a review before the first listing and
+  each update; the listing can be "unlisted" (reachable only by link). Upload the chromium zip.
+- **A listing on addons.mozilla.org** instead of self-distribution: upload `dist/firefox` (it has
+  no update address; Mozilla refuses one and updates listed add-ons itself).
+
+The manifest's Firefox add-on id is `overlay@iliad.ac`; it declares that sign-in information and
+website activity (votes, inline reactions) go to the overlay service.
 
 ## Checking a change
 

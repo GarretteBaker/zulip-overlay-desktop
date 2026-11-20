@@ -1,7 +1,8 @@
 // Builds the Iliad Overlay browser extension from the same overlay script and
 // stylesheet the desktop app bundles (app/overlay).
 //
-//   node extension/build.mjs           → extension/dist/chromium, extension/dist/firefox
+//   node extension/build.mjs           → extension/dist/chromium, firefox (for addons.mozilla.org)
+//                                        and firefox-selfhosted (to be signed and handed out)
 //   node extension/build.mjs --test    → extension/dist/test-chromium and test-firefox as well: run on
 //                                        chat.zulip.org while logged out, against a
 //                                        development service on this machine
@@ -19,7 +20,10 @@ const {version} = JSON.parse(
   fs.readFileSync(path.join(root, "package.json"), "utf8"),
 );
 
-function build(name, {hosts, service, firefox = false, shim = false}) {
+function build(
+  name,
+  {hosts, service, firefox = false, shim = false, selfHosted = false},
+) {
   const out = path.join(here, "dist", name);
   fs.rmSync(out, {recursive: true, force: true});
   fs.mkdirSync(out, {recursive: true});
@@ -76,6 +80,16 @@ function build(name, {hosts, service, firefox = false, shim = false}) {
           browser_specific_settings: {
             gecko: {
               id: "overlay@iliad.ac",
+              // Where a copy installed from a signed file looks for newer
+              // versions; the release workflow writes that file when it
+              // signs the add-on. A build for addons.mozilla.org must not
+              // have it: Mozilla updates those itself and refuses the key.
+              ...(!selfHosted
+                ? {}
+                : {
+                    update_url:
+                      "https://github.com/GarretteBaker/zulip-overlay-desktop/releases/latest/download/firefox-updates.json",
+                  }),
               strict_min_version: "142.0",
               // What leaves the browser for the overlay service: the token
               // that signs the user in to it, and which topics, messages
@@ -101,6 +115,7 @@ const real = {
 };
 build("chromium", real);
 build("firefox", {...real, firefox: true});
+build("firefox-selfhosted", {...real, firefox: true, selfHosted: true});
 if (process.argv.includes("--test")) {
   const test = {
     hosts: ["chat.zulip.org"],
