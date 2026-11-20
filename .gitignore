@@ -24,3 +24,6 @@ config.gypi
 # tests/package.json
 
 .python-version
+
+# Built browser extension
+/extension/dist/

@@ -1,5 +1,8 @@
 // Zulip overlay script. The desktop app injects this into the stock Zulip
-// web page of the configured organization (see app/common/overlay-config.ts).
+// web page of the configured organization (see app/common/overlay-config.ts);
+// the browser extension (extension/) runs the same file as a content script.
+// It must therefore use only the page's DOM and same-origin requests, never
+// the page's own JavaScript objects, which a content script cannot see.
 //
 // It redraws the page; it never changes Zulip's own code or data model.
 //   F1 votes            arrows + score on each topic header (the main thing),
@@ -56,6 +59,13 @@
   if (bridge === undefined) {
     return;
   }
+
+  // Requests to Zulip must be the page's own: same origin, the user's
+  // session cookie. In the desktop app and in Chromium that is plain fetch.
+  // In a Firefox content script plain fetch belongs to the extension, and
+  // the page's is content.fetch.
+  const pageFetch = (...parameters) =>
+    (globalThis.content?.fetch ?? globalThis.fetch)(...parameters);
 
   const GAP_MINUTES = 30; // Default threshold; a per-user setting.
   const MAX_TOPIC_LENGTH = 60; // Zulip's limit, in code points.
@@ -127,7 +137,7 @@
     covered: new Map(), // Channel id -> true/false, or a Promise of it
     uncovered: new Set(), // Message ids on the page the service must not see
   };
-  const VERSION = "0.3.3-alpha";
+  const VERSION = "0.3.4-alpha";
   globalThis.__zulipOverlay = {version: VERSION, state};
 
   function element(tag, className, text) {
@@ -454,7 +464,10 @@
     if (
       typeof latest === "string" &&
       compareVersions(VERSION, latest) < 0 &&
-      !state.updateNoticed
+      !state.updateNoticed &&
+      // The browser extension is updated by the browser, on its own
+      // schedule; a notice would only send people to the desktop download.
+      bridge.updatesItself !== true
     ) {
       state.updateNoticed = true;
       const where = health.body.download_url;
@@ -622,7 +635,7 @@
   async function zulipGet(path, parameters) {
     const query =
       parameters === undefined ? "" : `?${new URLSearchParams(parameters)}`;
-    const response = await fetch(`/json${path}${query}`, {
+    const response = await pageFetch(`/json${path}${query}`, {
       credentials: "same-origin",
     });
     return response.ok ? response.json() : undefined;
@@ -642,7 +655,7 @@
       return false;
     }
 
-    const response = await fetch(
+    const response = await pageFetch(
       `/json${path}?${new URLSearchParams(parameters)}`,
       {
         method,

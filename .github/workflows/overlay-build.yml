@@ -57,6 +57,15 @@ jobs:
           # Do not look for a Developer ID or a Windows certificate.
           CSC_IDENTITY_AUTO_DISCOVERY: "false"
         run: pnpm exec electron-builder ${{ matrix.flags }} --publish=never
+      - name: Build the browser extension
+        if: runner.os == 'Linux'
+        run: |
+          node extension/build.mjs
+          version="$(node -p 'require("./package.json").version')"
+          for browser in chromium firefox; do
+            (cd "extension/dist/$browser" && zip -qr "../../../dist/Iliad-Overlay-extension-$browser-$version.zip" .)
+          done
+          ls -la dist/*.zip
       - name: Write the macOS update manifest
         if: runner.os == 'macOS'
         run: node tools/overlay-mac-manifest.mjs dist
@@ -105,6 +114,7 @@ jobs:
           - **macOS**: not signed with an Apple Developer ID. After the first blocked launch, open System Settings → Privacy & Security and choose "Open Anyway". Apple silicon: the `arm64` file; Intel: `x64`.
           - **Windows**: SmartScreen warns about an unknown publisher; choose "More info" → "Run anyway".
           - **Linux**: make the AppImage executable and run it.
+          - **In your browser instead** (no separate app): download `Iliad-Overlay-extension-chromium-<version>.zip`, unzip it somewhere permanent, open `chrome://extensions`, switch on "Developer mode", choose "Load unpacked" and pick the unzipped folder. Works in Chrome, Chromium, Brave, Edge, Arc and Vivaldi. It does not update itself until it is in the browser stores. The Firefox zip only loads as a temporary add-on (`about:debugging`), which Firefox removes on restart.
 
           Installed copies update themselves from here (on macOS only once the app has been moved to Applications; on Linux only the AppImage).
 

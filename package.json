@@ -1,6 +1,6 @@
 {
   "name": "iliad-overlay",
-  "version": "0.3.3",
+  "version": "0.3.4",
   "private": true,
   "description": "Iliad Overlay: an unofficial Zulip desktop client with votes, replies, threads and inline reactions",
   "license": "Apache-2.0",
