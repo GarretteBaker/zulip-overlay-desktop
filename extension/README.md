@@ -25,19 +25,23 @@ overlay service accepts cross-origin calls, which a token authorises, not a cook
   `extension/dist/firefox/manifest.json`. Firefox removes it on restart; a permanent install needs
   the add-on signed by Mozilla.
 
-## Self-update (not switched on yet; needs Garrett's accounts)
+## Self-update
 
 A browser only updates an extension it got from a source it trusts. "Load unpacked" and temporary
 add-ons never update.
 
-- **Firefox**: add the repository secrets `AMO_JWT_ISSUER` and `AMO_JWT_SECRET` (a free Mozilla
-  account → addons.mozilla.org → Tools → Manage API Keys). The release workflow then has Mozilla
-  sign `dist/firefox-selfhosted` for distribution outside its store and publishes
-  `Iliad-Overlay-firefox-<version>.xpi` with `firefox-updates.json`. People install the `.xpi`
-  once; Firefox then updates it from each new release. No store listing or manual review.
-- **Chrome and the rest of that family**: only the Chrome Web Store updates extensions on Windows
-  and macOS. It takes a developer account (5 USD once) and a review before the first listing and
-  each update; the listing can be "unlisted" (reachable only by link). Upload the chromium zip.
+- **Firefox: on since 20 November 2026.** The repository secrets `AMO_JWT_ISSUER` and
+  `AMO_JWT_SECRET` belong to a Mozilla account made for this (muse.iliad@gmail.com, display name
+  "Iliad"; its sign-in details are in `~/.config/muse-accounts/` on Garrett's laptop). The release
+  workflow has Mozilla sign `dist/firefox-selfhosted` for distribution outside its store and
+  publishes `Iliad-Overlay-firefox-<version>.xpi` with `firefox-updates.json`. People install the
+  `.xpi` once; Firefox then updates it from each new release. 0.3.4 was signed by hand with the same
+  command and attached to its release; the workflow's own signing step first runs with 0.3.5.
+  Mozilla refuses to sign the same version twice.
+- **Chrome and the rest of that family: not done.** Only the Chrome Web Store updates extensions on
+  Windows and macOS. It takes a developer account (5 USD once) and a review before the first
+  listing and each update; the listing can be "unlisted" (reachable only by link). Upload the
+  chromium zip.
 - **A listing on addons.mozilla.org** instead of self-distribution: upload `dist/firefox` (it has
   no update address; Mozilla refuses one and updates listed add-ons itself).
 
