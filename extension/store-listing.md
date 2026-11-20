@@ -1,6 +1,14 @@
 # Chrome Web Store listing: what to enter
 
-Draft answers for the developer dashboard's forms. Nothing here has been submitted.
+Submitted for review on 20 November 2026 as version 0.3.4, visibility **Unlisted**, item id
+`bajobbdfgkbnhbdifclcieggbpdcdand`, under the publisher "Iliad" (the Muse Google account). Once it
+passes review it is published automatically at
+https://chromewebstore.google.com/detail/bajobbdfgkbnhbdifclcieggbpdcdand
+
+What was entered follows. Differences from the first draft: data use was declared as "Personally
+identifiable information" (the Zulip user id) and "Authentication information" (the service
+token); the screenshot is the private test channel with every other channel, the direct messages
+and the user list hidden; the privacy policy is `PRIVACY.md` in this repository.
 
 ## Store listing
 

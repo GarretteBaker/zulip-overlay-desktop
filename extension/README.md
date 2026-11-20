@@ -38,10 +38,10 @@ add-ons never update.
   `.xpi` once; Firefox then updates it from each new release. 0.3.4 was signed by hand with the same
   command and attached to its release; the workflow's own signing step first runs with 0.3.5.
   Mozilla refuses to sign the same version twice.
-- **Chrome and the rest of that family: not done.** Only the Chrome Web Store updates extensions on
-  Windows and macOS. It takes a developer account (5 USD once) and a review before the first
-  listing and each update; the listing can be "unlisted" (reachable only by link). Upload the
-  chromium zip.
+- **Chrome and the rest of that family: submitted, waiting for Google's review** (20 November
+  2026, unlisted; see `store-listing.md`). Only the Chrome Web Store updates extensions on Windows
+  and macOS. Each new version has to be uploaded in the developer dashboard and is reviewed again;
+  the release workflow does not do that yet.
 - **A listing on addons.mozilla.org** instead of self-distribution: upload `dist/firefox` (it has
   no update address; Mozilla refuses one and updates listed add-ons itself).
 
